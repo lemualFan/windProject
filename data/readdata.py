@@ -1,4 +1,3 @@
-print("123")
 import pandas as pd
 from matplotlib import pyplot
 data = pd.read_excel('data.xlsx')
