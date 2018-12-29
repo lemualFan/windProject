@@ -19,7 +19,7 @@ from sklearn.metrics import mean_squared_error
 
 
 ndata = data[['time','power_30s_avr','speed_wind_30s_avr']]
-values = ndata.iloc[:,1:3].values
+values = ndata.iloc[:15000,1:3].values
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled = scaler.fit_transform(values)
 scaled_columns = ['power_30s_avr', 'speed_wind_30s_avr']
@@ -35,7 +35,7 @@ scaled_columns = ['power_30s_avr', 'speed_wind_30s_avr']
     Returns:
         Pandas DataFrame of series framed for supervised learning.
 """
-n_in = 100
+n_in = 5
 #调整n_in 即可
 
 # 将序列数据转化为监督学习数据
@@ -44,33 +44,35 @@ reframed = series_to_supervised(scaled, scaled_columns, n_in, 1)
 reframed.drop(reframed.columns[[reframed.shape[1]-1]], axis=1, inplace=True)
 
 #只保留t-n_in的数据
-drop_columns = range(2,n_in*2)
-reframed.drop(reframed.columns[drop_columns], axis=1, inplace=True)
+# drop_columns = range(2,n_in*2)
+# reframed.drop(reframed.columns[drop_columns], axis=1, inplace=True)
 
 values = reframed.values
 
 
-n_trian_hours = 24*120*25
-train = values[:n_trian_hours,:]
-test = values[n_trian_hours:,:]
+train_size = round(len(values)*0.67)
+train = values[:train_size,:]
+test = values[train_size:,:]
 train_x, train_y = train[:, :-1], train[:, -1]
 test_x, test_y = test[:, :-1], test[:, -1]
 
 # 为了在LSTM中应用该数据，需要将其格式转化为3D format，即[Samples, timesteps, features]
 train_X = train_x.reshape((train_x.shape[0],1, train_x.shape[1]))
 test_X = test_x.reshape(( test_x.shape[0],1, test_x.shape[1]))
+val_size = 0.2
 
 model = Sequential()
+#model.add(LSTM(10, input_shape=(train_X.shape[1], train_X.shape[2])))
 model.add(LSTM(10, input_shape=(train_X.shape[1], train_X.shape[2])))
 model.add(Dense(1))
 model.compile(loss='mae', optimizer='adam')
-history = model.fit(train_X, train_y, epochs=10, batch_size=72, validation_data=(test_X, test_y))
+history = model.fit(train_X, train_y, epochs=10, batch_size=50)
 
 '''
     对数据绘图
 '''
 plt.plot(history.history['loss'], label='train')
-plt.plot(history.history['val_loss'], label='test')
+# plt.plot(history.history['val_loss'], label='test')
 plt.legend()
 plt.show()
 
