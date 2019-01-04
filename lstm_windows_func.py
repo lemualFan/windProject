@@ -20,10 +20,10 @@ from sklearn.metrics import mean_squared_error
 
 ndata = data[['power_30s_avr','speed_wind_30s_avr','temp_de','speed_generator','temp_nde',
        'speed_rotor', 'speed_high_shaft', 'temp_ambient', 'temp_main_bearing']]
-model_train_and_fit(20000,20,25,32)
+model_train_and_fit(80000,20,25,32)
 
-def model_train_and_fit(samples_num=20000,n_in=10,epochs=25, batch_size=32):
-    values = ndata.iloc[:20000,:].values
+def model_train_and_fit(samples_num,n_in=10,epochs=25, batch_size=32):
+    values = ndata.iloc[:samples_num,:].values
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled = scaler.fit_transform(values)
     scaled_y = scaled[:,0:1]
@@ -41,7 +41,7 @@ def model_train_and_fit(samples_num=20000,n_in=10,epochs=25, batch_size=32):
         Returns:
             Pandas DataFrame of series framed for supervised learning.
     """
-    n_in = 10
+    # n_in = 10
     #调整n_in 即可
 
     # 将序列数据转化为监督学习数据

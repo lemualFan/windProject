@@ -20,9 +20,8 @@ ndata = data[['power_30s_avr', 'speed_wind_30s_avr', 'temp_de', 'speed_generator
               'speed_rotor', 'speed_high_shaft', 'temp_ambient', 'temp_main_bearing']]
 
 
-
 def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
-    values = ndata.iloc[:20000, :].values
+    values = ndata.iloc[:samples_num, :].values
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled = scaler.fit_transform(values)
     scaled_y = scaled[:, 0:1]
@@ -41,7 +40,7 @@ def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
            Returns:
                Pandas DataFrame of series framed for supervised learning.
        """
-    n_in = 10
+    # n_in = 10
     # 调整n_in 即可
 
     # 将序列数据转化为监督学习数据
@@ -54,29 +53,33 @@ def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
     values = reframed.values
 
     # 划分训练集和测试集
-    train_size = round(len(values) * 0.67)
+    train_size = round(len(values) * 0.6)
+    val_size = round(len(values)*0.2)
     train = values[:train_size, :]
-    test = values[train_size:, :]
+    val = values[train_size:val_size+train_size, :]
+    test = values[val_size+train_size:, :]
     train_x, train_y = train[:, :-1], train[:, -1]
     test_x, test_y = test[:, :-1], test[:, -1]
+    val_x, val_y = val[:, :-1], val[:, -1]
 
     # 为了在LSTM中应用该数据，需要将其格式转化为3D format，即[Samples, timesteps, features]
     train_X = train_x.reshape((train_x.shape[0], 1, train_x.shape[1]))
     test_X = test_x.reshape((test_x.shape[0], 1, test_x.shape[1]))
+    val_X = val_x.reshape((val_x.shape[0], 1, val_x.shape[1]))
 
     model = Sequential()
     # model.add(LSTM(10, input_shape=(train_X.shape[1], train_X.shape[2])))
     model.add(LSTM(10, input_shape=(train_X.shape[1], train_X.shape[2])))
     model.add(Dense(1))
     model.compile(loss='mae', optimizer='adam')
-    history = model.fit(train_X, train_y, epochs=25, batch_size=32)
+    history = model.fit(train_X, train_y, epochs, batch_size, validation_data=(val_X, val_y))
     # , validation_data=(test_X, test_y)
 
     '''
            对数据绘图
        '''
     plt.plot(history.history['loss'], label='train')
-    # plt.plot(history.history['val_loss'], label='test')
+    plt.plot(history.history['val_loss'], label='val')
     plt.legend()
     plt.show()
 
@@ -110,4 +113,4 @@ def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
     plt.legend()
     plt.show()
 
-model_train_and_fit(20000, 20, 25, 32)
+model_train_and_fit(80000, 120, 128, 10)
