@@ -10,7 +10,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import MinMaxScaler
 
 from keras import Sequential
-from keras.layers import LSTM, Dense
+from keras.layers import LSTM, Dense ,GRU
 import matplotlib.pyplot as plt
 from numpy import concatenate  # 数组拼接
 from math import sqrt
@@ -20,7 +20,7 @@ ndata = data[['power_30s_avr', 'speed_wind_30s_avr', 'temp_de', 'speed_generator
               'speed_rotor', 'speed_high_shaft', 'temp_ambient', 'temp_main_bearing']]
 
 
-def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
+def model_train_and_fit(samples_num=80000, n_in=100, epochs=25, batch_size=128):
     values = ndata.iloc[:samples_num, :].values
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled = scaler.fit_transform(values)
@@ -46,8 +46,11 @@ def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
     # 将序列数据转化为监督学习数据
     reframed = series_to_supervised(scaled_exc_y, scaled_columns, n_in, 0)
 
+    reframed.drop(reframed.columns[range(8,reframed.shape[1])], axis=1, inplace=True)
+    print(reframed.columns)
+
     # 对齐powert 与  t-5的数据
-    scaled_y = scaled[:-n_in, 0:1]
+    scaled_y = scaled[n_in:, 0:1]
     reframed['power(t)'] = scaled_y
 
     values = reframed.values
@@ -69,7 +72,9 @@ def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
 
     model = Sequential()
     # model.add(LSTM(10, input_shape=(train_X.shape[1], train_X.shape[2])))
-    model.add(LSTM(10, input_shape=(train_X.shape[1], train_X.shape[2])))
+    model.add(LSTM(16, input_shape=(train_X.shape[1], train_X.shape[2]), return_sequences=True))
+    model.add(LSTM(16,return_sequences=True))
+    model.add(GRU(16))
     model.add(Dense(1))
     model.compile(loss='mae', optimizer='adam')
     history = model.fit(train_X, train_y, epochs, batch_size, validation_data=(val_X, val_y))
@@ -102,9 +107,10 @@ def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
     print('Test RMSE: %.3f' % rmse)
 
     ahead_second = n_in * 30
+    ahead_hour = round(n_in/120)
 
     plt.figure(12)
-    plt.suptitle("%s s ahead,Test RMSE:%s" % (ahead_second, rmse))
+    plt.suptitle("%s h ahead,Test RMSE:%s" % (ahead_hour, rmse))
     plt.subplot(221), plt.plot(inv_yHat, label='predict')
     plt.legend()
     plt.subplot(223), plt.plot(inv_y, label='raw')
@@ -113,4 +119,4 @@ def model_train_and_fit(samples_num=20000, n_in=10, epochs=25, batch_size=32):
     plt.legend()
     plt.show()
 
-model_train_and_fit(80000, 120, 128, 10)
+model_train_and_fit(80000, 200, 128, 25)
