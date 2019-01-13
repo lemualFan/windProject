@@ -1,6 +1,7 @@
 from data import loaddata
 from config import RAW_DATA, PROCESS_LEVEL1
 import pandas as pd
+import numpy as np
 from series_to_supervised_learning import series_to_supervised
 
 data = loaddata.load_data(RAW_DATA)
@@ -10,7 +11,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import MinMaxScaler
 
 from keras import Sequential
-from keras.layers import LSTM, Dense ,GRU
+from keras.layers import LSTM, Dense ,GRU ,Dropout
 import matplotlib.pyplot as plt
 from numpy import concatenate  # 数组拼接
 from math import sqrt
@@ -71,10 +72,13 @@ def model_train_and_fit(samples_num=80000, n_in=100, epochs=25, batch_size=128):
     val_X = val_x.reshape((val_x.shape[0], 1, val_x.shape[1]))
 
     model = Sequential()
-    # model.add(LSTM(10, input_shape=(train_X.shape[1], train_X.shape[2])))
-    model.add(LSTM(16, input_shape=(train_X.shape[1], train_X.shape[2]), return_sequences=True))
-    model.add(LSTM(16,return_sequences=True))
-    model.add(GRU(16))
+    model.add(LSTM(16, input_shape=(train_X.shape[1], train_X.shape[2])))
+    # model.add(LSTM(10, input_shape=(train_X.shape[1], train_X.shape[2]), return_sequences=True))
+    # model.add(Dropout(0.3))
+    # model.add(LSTM(10,return_sequences=True))
+    # model.add(Dropout(0.3))
+    # model.add(GRU(10))
+    # model.add(Dropout(0.3))
     model.add(Dense(1))
     model.compile(loss='mae', optimizer='adam')
     history = model.fit(train_X, train_y, epochs, batch_size, validation_data=(val_X, val_y))
@@ -107,10 +111,10 @@ def model_train_and_fit(samples_num=80000, n_in=100, epochs=25, batch_size=128):
     print('Test RMSE: %.3f' % rmse)
 
     ahead_second = n_in * 30
-    ahead_hour = round(n_in/120)
+    ahead_hour = round(n_in/120,2)
 
     plt.figure(12)
-    plt.suptitle("%s h ahead,Test RMSE:%s" % (ahead_hour, rmse))
+    plt.suptitle("%s samples,%s h ahead,Test RMSE:%s" % (samples_num,ahead_hour, rmse))
     plt.subplot(221), plt.plot(inv_yHat, label='predict')
     plt.legend()
     plt.subplot(223), plt.plot(inv_y, label='raw')
@@ -118,5 +122,10 @@ def model_train_and_fit(samples_num=80000, n_in=100, epochs=25, batch_size=128):
     plt.subplot(122), plt.plot(inv_y, label='raw'), plt.plot(inv_yHat, label='predict')
     plt.legend()
     plt.show()
+    print("samples_num:", samples_num, "ahead_hour:", ahead_hour, "rmse", rmse)
+    return inv_yHat
 
-model_train_and_fit(80000, 200, 128, 25)
+
+yHat  = model_train_and_fit(80000, 240, 128, 25)
+
+# np.savetxt("yHat.csv",yHat)
